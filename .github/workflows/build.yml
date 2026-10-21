@@ -19,20 +19,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      # Project has no gradlew / wrapper jar, so install Gradle 8.7 directly
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
 
+      - name: Locate project
+        id: proj
+        run: |
+          F=$(find . -name 'settings.gradle*' -not -path '*/node_modules/*' | head -n 1)
+          if [ -z "$F" ]; then echo "No settings.gradle(.kts) found in repo"; ls -R; exit 1; fi
+          D=$(dirname "$F")
+          echo "Project dir: $D"
+          echo "dir=$D" >> "$GITHUB_OUTPUT"
+
       - name: Build debug APK
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: AutoPiano-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/debug/app-debug.apk
